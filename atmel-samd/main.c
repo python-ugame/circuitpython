@@ -116,44 +116,13 @@ void init_flash_fs(bool create_allowed) {
     vfs_fat->flags = 0;
     flash_init_vfs(vfs_fat);
 
-    // try to mount the flash
-    FRESULT res = f_mount(&vfs_fat->fatfs);
+    uint8_t working_buf[_MAX_SS];
+    f_mkfs(&vfs_fat->fatfs, FM_FAT, 0, working_buf, sizeof(working_buf));
+    // Flush the new file system to make sure its repaired immediately.
+    flash_flush();
 
-    if (res == FR_NO_FILESYSTEM && create_allowed) {
-        // no filesystem so create a fresh one
-
-        // Wait two seconds before creating. Jittery power might
-        // fail before we're ready. This can happen if someone
-        // is bobbling a bit when plugging in a battery.
-        mp_hal_delay_ms(2000);
-
-        // Then try one more time to mount the flash in case it was late coming up.
-        res = f_mount(&vfs_fat->fatfs);
-        if (res == FR_NO_FILESYSTEM) {
-            uint8_t working_buf[_MAX_SS];
-            res = f_mkfs(&vfs_fat->fatfs, FM_FAT, 0, working_buf, sizeof(working_buf));
-            // Flush the new file system to make sure its repaired immediately.
-            flash_flush();
-            if (res != FR_OK) {
-                return;
-            }
-
-            // set label
-            f_setlabel(&vfs_fat->fatfs, "CIRCUITPY");
-        }
-    } else if (res != FR_OK) {
-        return;
-    }
-    mp_vfs_mount_t *vfs = &mp_vfs_mount_flash;
-    vfs->str = "/";
-    vfs->len = 1;
-    vfs->obj = MP_OBJ_FROM_PTR(vfs_fat);
-    vfs->next = NULL;
-    MP_STATE_VM(vfs_mount_table) = vfs;
-
-    // The current directory is used as the boot up directory.
-    // It is set to the internal flash filesystem by default.
-    MP_STATE_PORT(vfs_cur) = vfs;
+    // set label
+    f_setlabel(&vfs_fat->fatfs, "CIRCUITPY");
 }
 
 static char heap[16384 + 4096];
