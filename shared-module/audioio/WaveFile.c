@@ -125,6 +125,7 @@ void common_hal_audioio_wavefile_construct(audioio_wavefile_obj_t* self,
 
 void common_hal_audioio_wavefile_deinit(audioio_wavefile_obj_t* self) {
     self->buffer = NULL;
+    self->second_buffer = NULL;
 }
 
 bool common_hal_audioio_wavefile_deinited(audioio_wavefile_obj_t* self) {
